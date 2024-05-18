@@ -13,8 +13,8 @@ class SimpleCipher:
         self.secret_key - Ключ шифрования - таблица замены. Если Таблица
         замены не задана то используется таблица замены по-умолчанию.
         """
-        self.alphabet = " " + string.ascii_lowercase
-        self.module = len(string.ascii_lowercase)
+        self.alphabet = string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation + " "
+        self.module = len(self.alphabet)
         self.alphabet_map = self.__get_alphabet_map()
         self.secret_key = self.__get_mapping(mapping)
 
@@ -22,8 +22,14 @@ class SimpleCipher:
     def __get_mapping(mapping):
         if mapping is None:
             mapping = [
-                [17, 26, 9, 22, 20, 11, 2, 23, 18, 5, 21, 3, 24, 16, 19, 0, 15, 10, 6, 7, 8, 12, 4, 13, 14, 1, 25],
-                [15, 25, 6, 11, 22, 9, 18, 19, 20, 2, 17, 5, 21, 23, 24, 16, 13, 0, 8, 14, 4, 10, 3, 7, 12, 26, 1]
+                [29, 44, 65, 31, 48, 4, 92, 84, 10, 37, 90, 9, 66, 93, 25, 17, 47, 35, 33, 20, 23, 19, 63, 30, 24, 75,
+                 68, 27, 1, 62, 59, 76, 7, 50, 16, 0, 5, 26, 22, 8, 85, 80, 54, 74, 89, 39, 36, 57, 55, 18, 40, 69, 43,
+                 28, 86, 71, 91, 6, 78, 87, 12, 41, 15, 34, 56, 70, 58, 52, 21, 2, 60, 82, 67, 45, 49, 53, 11, 88, 73,
+                 13, 79, 42, 46, 64, 61, 38, 94, 77, 83, 72, 14, 81, 51, 32, 3],
+                [35, 28, 69, 94, 5, 36, 57, 32, 39, 11, 8, 76, 60, 79, 90, 62, 34, 15, 49, 21, 19, 68, 38, 20, 24, 14,
+                 37, 27, 53, 0, 23, 3, 93, 18, 63, 17, 46, 9, 85, 45, 50, 61, 81, 52, 1, 73, 82, 16, 4, 74, 33, 92, 67,
+                 75, 42, 48, 64, 47, 66, 30, 70, 84, 29, 22, 83, 2, 12, 72, 26, 51, 65, 55, 89, 78, 43, 25, 31, 87, 58,
+                 80, 41, 91, 71, 88, 7, 40, 54, 59, 77, 44, 10, 56, 6, 13, 86]
             ]
         return mapping
 
@@ -42,7 +48,6 @@ class SimpleCipher:
         :param letter:
         :return:
         """
-        letter = letter.lower()
         return self.alphabet_map.get(letter)
 
     def _get_letter_by_index(self, index):
