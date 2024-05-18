@@ -6,22 +6,26 @@ import string
 class SimpleCipher:
     """ Шифр простой замены """
 
-    def __init__(self):
+    def __init__(self, mapping=None):
         """
-        self.alphabet -
-        self.alphabet_map -
-        self.map -
-        self.map_inv -
+        self.alphabet - Используемый алфавит (ascii + пробел)
+        self.alphabet_map - Таблица соответствия идекса и букв алфавита
+        self.secret_key - Ключ шифрования - таблица замены. Если Таблица
+        замены не задана то используется таблица замены по-умолчанию.
         """
         self.alphabet = " " + string.ascii_lowercase
         self.module = len(string.ascii_lowercase)
         self.alphabet_map = self.__get_alphabet_map()
-        self.map = [
-            17, 26, 9, 22, 20, 11, 2, 23, 18, 5, 21, 3, 24, 16, 19, 0, 15, 10, 6, 7, 8, 12, 4, 13, 14, 1, 25
-        ]
-        self.map_inv = [
-            15, 25, 6, 11, 22, 9, 18, 19, 20, 2, 17, 5, 21, 23, 24, 16, 13, 0, 8, 14, 4, 10, 3, 7, 12, 26, 1
-        ]
+        self.secret_key = self.__get_mapping(mapping)
+
+    @staticmethod
+    def __get_mapping(mapping):
+        if mapping is None:
+            mapping = [
+                [17, 26, 9, 22, 20, 11, 2, 23, 18, 5, 21, 3, 24, 16, 19, 0, 15, 10, 6, 7, 8, 12, 4, 13, 14, 1, 25],
+                [15, 25, 6, 11, 22, 9, 18, 19, 20, 2, 17, 5, 21, 23, 24, 16, 13, 0, 8, 14, 4, 10, 3, 7, 12, 26, 1]
+            ]
+        return mapping
 
     def __get_alphabet_map(self):
         alphabet = {}
@@ -38,15 +42,8 @@ class SimpleCipher:
         :param letter:
         :return:
         """
-        if len(letter) != 1:
-            raise ValueError('Функция __get_index_by_letter принимает 1 букву в качестве аргумента')
-        else:
-            letter = letter.lower()
-
-        index = self.alphabet_map.get(letter)
-        if index is None:
-            raise ValueError('Нет такой буквы в переменной alphabet')
-        return index
+        letter = letter.lower()
+        return self.alphabet_map.get(letter)
 
     def _get_letter_by_index(self, index):
         """
@@ -61,7 +58,7 @@ class SimpleCipher:
 
         for i in message:
             index = self._get_index_by_letter(i)
-            enc_index = self.map[index]
+            enc_index = self.secret_key[0][index]
             encrypted_message.append(self._get_letter_by_index(enc_index))
 
         return ''.join(encrypted_message)
@@ -71,7 +68,7 @@ class SimpleCipher:
 
         for i in encrypted_message:
             enc_index = self._get_index_by_letter(i)
-            decr_index = self.map_inv[enc_index]
+            decr_index = self.secret_key[1][enc_index]
             decrypted_message.append(self._get_letter_by_index(decr_index))
 
         return ''.join(decrypted_message)
@@ -80,24 +77,28 @@ class SimpleCipher:
 class AffineCipher(SimpleCipher):
     """ Аффинный шифр """
 
-    def __init__(self):
+    def __init__(self, secret_key=None):
         super().__init__()
-        self._secret_key = self._get_secret_key()
+        self.secret_key = self._get_secret_key(secret_key)
 
-    def _get_secret_key(self):
+    def _get_secret_key(self, secret_key):
         """
         Генератор ключа афинного шифра.
         m - модуль алгоритма (мощность алфавита шифрования)
         а - должен быть взаимнопростым с модулем шифрования
         b - произвольное число (в пределах модуля алгоритма)
-        :return: (a, b, m)
+        :return: (a, b)
         """
-        a = random.randrange(1, 100) % self.module
-
-        if a < 3 or math.gcd(a, self.module) != 1:
+        if secret_key is None:
             a = random.randrange(1, 100) % self.module
 
-        b = random.randrange(1, 100) % self.module
+            if a < 3 or math.gcd(a, self.module) != 1:
+                a = random.randrange(1, 100) % self.module
+
+            b = random.randrange(1, 100) % self.module
+        else:
+            a, b = secret_key
+
         return a, b
 
     def encrypt(self, message: str):
@@ -111,7 +112,7 @@ class AffineCipher(SimpleCipher):
 
         for i in message:
             index = self._get_index_by_letter(i)
-            enc_index = (self._secret_key[0] * index + self._secret_key[1]) % self.module
+            enc_index = (self.secret_key[0] * index + self.secret_key[1]) % self.module
             encrypted_message.append(self._get_letter_by_index(enc_index))
 
         return ''.join(encrypted_message)
@@ -127,8 +128,8 @@ class AffineCipher(SimpleCipher):
 
         for i in encrypted_message:
             index = self._get_index_by_letter(i)
-            a_inv = pow(self._secret_key[0], -1, self.module)
-            dec_index = ((index - self._secret_key[1]) * a_inv) % self.module
+            a_inv = pow(self.secret_key[0], -1, self.module)
+            dec_index = ((index - self.secret_key[1]) * a_inv) % self.module
             decrypted_message.append(self._get_letter_by_index(dec_index))
 
         return ''.join(decrypted_message)
@@ -137,9 +138,12 @@ class AffineCipher(SimpleCipher):
 class AffineRecurrentCipher(AffineCipher):
     """ Аффинный рекуррентный шифр """
 
-    def __init__(self):
+    def __init__(self, secret_key=None, secret_key_2=None):
         super().__init__()
-        self.__secret_key = self._get_secret_key()
+        self.secret_keys = [
+            self._get_secret_key(secret_key),
+            self._get_secret_key(secret_key_2)
+        ]
 
     def _override_key(self, secret_keys):
         """ Пересчитываем ключ шифрования """
@@ -148,7 +152,7 @@ class AffineRecurrentCipher(AffineCipher):
         return a, b
 
     def encrypt(self, message: str):
-        secret_keys = [self.__secret_key, self.__secret_key]
+        secret_keys = [self.secret_keys[0], self.secret_keys[1]]
         encrypted_message = []
 
         for num, i in enumerate(message):
@@ -157,7 +161,7 @@ class AffineRecurrentCipher(AffineCipher):
                 a, b = self._override_key(secret_keys)
                 secret_keys.append((a, b))
             else:
-                a, b, m = secret_keys[num]
+                a, b = secret_keys[num]
 
             # Шифруем очередной симвом открытого текста
             index = self._get_index_by_letter(i)
@@ -167,7 +171,7 @@ class AffineRecurrentCipher(AffineCipher):
         return ''.join(encrypted_message)
 
     def decrypt(self, encrypted_message: str):
-        secret_keys = [self.__secret_key, self.__secret_key]
+        secret_keys = [self.secret_keys[0], self.secret_keys[1]]
         decrypted_message = []
 
         for num, i in enumerate(encrypted_message):
